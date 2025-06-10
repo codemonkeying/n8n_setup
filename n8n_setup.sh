@@ -289,7 +289,9 @@ test_n8n() {
     info "Testing N8N installation..."
     
     # Source environment variables
-    export $(cat "$CONFIG_DIR/.env" | xargs)
+    set -a
+    source "$CONFIG_DIR/.env"
+    set +a
     
     # Test database connection
     info "Testing database connection..."
@@ -338,7 +340,9 @@ CONFIG_DIR="$N8N_DIR/config"
 
 # Load environment variables
 if [[ -f "$CONFIG_DIR/.env" ]]; then
-    export $(cat "$CONFIG_DIR/.env" | xargs)
+    set -a
+    source "$CONFIG_DIR/.env"
+    set +a
 else
     echo "Error: Configuration file not found at $CONFIG_DIR/.env"
     exit 1
