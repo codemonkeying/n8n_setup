@@ -27,9 +27,6 @@ fi
 pkill -f "n8n start" 2>/dev/null || true
 sleep 1
 
-# Activate Python virtual environment
-source "$N8N_DIR/venv/bin/activate"
-
-# Start N8N
+# Start N8N (no need for Python venv since n8n is installed globally)
 echo "Starting N8N on port $N8N_PORT..."
 n8n start
