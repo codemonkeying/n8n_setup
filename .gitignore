@@ -1,0 +1,64 @@
+# N8N Production Setup - Git Ignore File
+
+# Sensitive configuration files
+config/.env
+config/.db_password
+*.env
+*.env.local
+*.env.production
+
+# Log files
+logs/
+*.log
+
+# Database backups
+backups/
+*.sql
+*.dump
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node.js dependencies (if any local packages)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Workflows (may contain sensitive data)
+workflows/*.json
+workflows/backups/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.directory
+*.pid
+
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
+
+# Local development overrides
+docker-compose.override.yml
+.env.override
+
+# Runtime files
+*.sock
+*.pid
