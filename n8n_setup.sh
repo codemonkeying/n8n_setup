@@ -219,12 +219,19 @@ GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 ALTER USER $DB_USER CREATEDB;
 \q
 EOF
+
+    # Grant CREATE privileges on public schema (required for N8N chat memory and other features)
+    sudo -u postgres psql -d "$DB_NAME" << EOF
+GRANT CREATE ON SCHEMA public TO $DB_USER;
+\q
+EOF
     
     # Store password for later use
     echo "$db_password" > "$CONFIG_DIR/.db_password"
     chmod 600 "$CONFIG_DIR/.db_password"
     
     success "Database '$DB_NAME' and user '$DB_USER' created successfully"
+    success "Granted CREATE privileges on public schema for N8N features"
     info "Database password stored in $CONFIG_DIR/.db_password"
 }
 
