@@ -39,7 +39,13 @@ log() {
     shift
     local message="$@"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
+    local log_message="[$timestamp] [$level] $message"
+    echo "$log_message"
+    
+    # Only write to log file if logs directory exists
+    if [[ -d "$LOGS_DIR" ]]; then
+        echo "$log_message" >> "$LOG_FILE"
+    fi
 }
 
 # Print colored output
