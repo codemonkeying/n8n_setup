@@ -243,9 +243,36 @@ check_install_postgresql() {
     sudo apt-get update
     sudo apt-get install -y postgresql postgresql-contrib
     
-    # Start and enable PostgreSQL
-    sudo systemctl start postgresql
-    sudo systemctl enable postgresql
+    # Check if main cluster exists, create if not
+    info "Checking PostgreSQL cluster..."
+    if ! sudo pg_lsclusters | grep -q "15.*main.*online"; then
+        info "Creating PostgreSQL main cluster..."
+        sudo pg_createcluster 15 main --start
+    else
+        info "PostgreSQL cluster already exists"
+        # Start and enable PostgreSQL service
+        sudo systemctl start postgresql
+        sudo systemctl enable postgresql
+    fi
+    
+    # Wait for PostgreSQL to be ready
+    info "Waiting for PostgreSQL to be ready..."
+    local max_attempts=10
+    local attempt=1
+    
+    while [[ $attempt -le $max_attempts ]]; do
+        if sudo -u postgres psql -c "SELECT 1;" >/dev/null 2>&1; then
+            success "PostgreSQL is ready"
+            break
+        fi
+        info "PostgreSQL not ready yet, waiting... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+    
+    if [[ $attempt -gt $max_attempts ]]; then
+        error_exit "PostgreSQL failed to start properly after installation"
+    fi
     
     success "PostgreSQL installed and started"
 }

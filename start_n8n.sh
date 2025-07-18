@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # N8N Startup Script
-N8N_DIR="/home/user/n8n"
+N8N_DIR="$(dirname "$(readlink -f "$0")")"
 CONFIG_DIR="$N8N_DIR/config"
 
 # Load environment variables
