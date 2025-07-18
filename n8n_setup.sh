@@ -145,10 +145,21 @@ setup_python_venv() {
     
     # Install python3-venv if not available
     if ! python3 -m venv --help >/dev/null 2>&1; then
-        info "Installing python3-venv package..."
+        # Get Python version to install the correct venv package
+        local python_version=$(python3 --version 2>&1 | grep -oP 'Python \K[0-9]+\.[0-9]+')
+        local venv_package="python${python_version}-venv"
+        
+        info "Installing ${venv_package} package..."
         sudo apt-get update
-        sudo apt-get install -y python3-venv
-        success "python3-venv package installed"
+        
+        # Try version-specific package first, fallback to generic
+        if sudo apt-get install -y "$venv_package" 2>/dev/null; then
+            success "${venv_package} package installed"
+        else
+            info "Version-specific package not found, trying python3-venv..."
+            sudo apt-get install -y python3-venv
+            success "python3-venv package installed"
+        fi
     fi
     
     if [[ ! -d "$VENV_DIR" ]]; then
