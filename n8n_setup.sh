@@ -143,6 +143,14 @@ setup_python_venv() {
         error_exit "Python3 is required but not installed"
     fi
     
+    # Install python3-venv if not available
+    if ! python3 -m venv --help >/dev/null 2>&1; then
+        info "Installing python3-venv package..."
+        sudo apt-get update
+        sudo apt-get install -y python3-venv
+        success "python3-venv package installed"
+    fi
+    
     if [[ ! -d "$VENV_DIR" ]]; then
         python3 -m venv "$VENV_DIR"
         success "Python virtual environment created"
