@@ -163,8 +163,35 @@ setup_python_venv() {
     fi
     
     if [[ ! -d "$VENV_DIR" ]]; then
-        python3 -m venv "$VENV_DIR"
-        success "Python virtual environment created"
+        # Try to create virtual environment, handle failure gracefully
+        set +e  # Temporarily disable exit on error
+        python3 -m venv "$VENV_DIR" 2>/dev/null
+        local venv_result=$?
+        set -e  # Re-enable exit on error
+        
+        if [[ $venv_result -ne 0 ]]; then
+            # If venv creation failed, try installing the package and retry
+            local python_version=$(python3 --version 2>&1 | grep -oP 'Python \K[0-9]+\.[0-9]+')
+            local venv_package="python${python_version}-venv"
+            
+            info "Virtual environment creation failed. Installing ${venv_package}..."
+            sudo apt-get update
+            
+            # Try version-specific package first, fallback to generic
+            if sudo apt-get install -y "$venv_package" 2>/dev/null; then
+                success "${venv_package} package installed"
+            else
+                info "Version-specific package not found, trying python3-venv..."
+                sudo apt-get install -y python3-venv
+                success "python3-venv package installed"
+            fi
+            
+            # Retry virtual environment creation
+            python3 -m venv "$VENV_DIR"
+            success "Python virtual environment created after installing dependencies"
+        else
+            success "Python virtual environment created"
+        fi
     else
         info "Python virtual environment already exists"
     fi
