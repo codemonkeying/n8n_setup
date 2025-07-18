@@ -208,18 +208,18 @@ check_install_nodejs() {
     
     if command_exists "node"; then
         local node_version=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
-        if [[ $node_version -ge 18 ]]; then
+        if [[ $node_version -ge 20 ]]; then
             success "Node.js version $(node --version) is compatible"
             return 0
         else
-            warning "Node.js version $(node --version) is too old. Need v18+"
+            warning "Node.js version $(node --version) is too old. Need v20+"
         fi
     fi
     
-    info "Installing Node.js v18..."
+    info "Installing Node.js v20 LTS..."
     
     # Install Node.js using NodeSource repository
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
     
     if command_exists "node" && command_exists "npm"; then
