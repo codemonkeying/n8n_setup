@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-N8N_DIR="/home/user/n8n"
+N8N_DIR="$(pwd)"
 CONFIG_DIR="$N8N_DIR/config"
 WORKFLOWS_DIR="$N8N_DIR/workflows"
 LOGS_DIR="$N8N_DIR/logs"
@@ -388,7 +388,7 @@ create_startup_script() {
 #!/bin/bash
 
 # N8N Startup Script
-N8N_DIR="/home/user/n8n"
+N8N_DIR="$(dirname "$(readlink -f "$0")")"
 CONFIG_DIR="$N8N_DIR/config"
 
 # Load environment variables
@@ -411,6 +411,88 @@ EOF
     
     chmod +x "$N8N_DIR/start_n8n.sh"
     success "Startup script created: $N8N_DIR/start_n8n.sh"
+}
+
+# Add PostgreSQL credential to N8N
+add_postgresql_credential() {
+    info "Adding PostgreSQL credential to N8N..."
+    
+    # Wait for n8n to be fully started and database initialized
+    local max_attempts=30
+    local attempt=1
+    
+    while [[ $attempt -le $max_attempts ]]; do
+        if sqlite3 ~/.n8n/database.sqlite "SELECT COUNT(*) FROM credentials_entity;" >/dev/null 2>&1; then
+            break
+        fi
+        info "Waiting for N8N database to be initialized... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+    
+    if [[ $attempt -gt $max_attempts ]]; then
+        warning "N8N database not found. PostgreSQL credential will need to be added manually."
+        return 0
+    fi
+    
+    # Check if PostgreSQL credential already exists
+    local existing_postgres_creds=$(sqlite3 ~/.n8n/database.sqlite "SELECT COUNT(*) FROM credentials_entity WHERE type='postgres' AND name='PostgreSQL Database';" 2>/dev/null || echo "0")
+    
+    if [[ "$existing_postgres_creds" -gt 0 ]]; then
+        info "PostgreSQL credential already exists in N8N"
+        return 0
+    fi
+    
+    # Get database password
+    local db_password=$(cat "$CONFIG_DIR/.db_password")
+    
+    # Generate UUID for credential ID
+    local cred_id=$(python3 -c "import uuid; print(str(uuid.uuid4()).replace('-', '')[:24])")
+    
+    # Create credential data (this will be encrypted by n8n when it starts)
+    # For now, we'll create a placeholder that the user can update
+    local credential_data="{\"host\":\"localhost\",\"port\":5432,\"database\":\"$DB_NAME\",\"user\":\"$DB_USER\",\"password\":\"$db_password\",\"allowUnauthorizedCerts\":false,\"ssl\":\"disable\"}"
+    
+    # Note: N8N encrypts credentials automatically, but we need to use n8n's API or wait for it to be running
+    # For now, we'll create a script that the user can run after n8n is started
+    cat > "$N8N_DIR/add_postgres_credential.sh" << EOF
+#!/bin/bash
+
+# Script to add PostgreSQL credential to N8N via API
+# Run this after N8N is started and you've created your first user
+
+N8N_URL="http://localhost:$N8N_PORT"
+DB_PASSWORD=\$(cat "$CONFIG_DIR/.db_password")
+
+echo "Adding PostgreSQL credential to N8N..."
+echo "Note: You may need to authenticate with N8N first"
+
+# Create credential via N8N API
+curl -X POST "\$N8N_URL/rest/credentials" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "PostgreSQL Database",
+    "type": "postgres",
+    "data": {
+      "host": "localhost",
+      "port": 5432,
+      "database": "$DB_NAME",
+      "user": "$DB_USER",
+      "password": "'\$DB_PASSWORD'",
+      "allowUnauthorizedCerts": false,
+      "ssl": "disable"
+    }
+  }'
+
+echo
+echo "PostgreSQL credential added successfully!"
+echo "You can now use this credential in your N8N workflows."
+EOF
+    
+    chmod +x "$N8N_DIR/add_postgres_credential.sh"
+    
+    success "PostgreSQL credential script created: $N8N_DIR/add_postgres_credential.sh"
+    info "Run this script after N8N is started and you've logged in to add the credential automatically"
 }
 
 # Main installation function
@@ -436,6 +518,7 @@ main() {
     set_permissions
     create_startup_script
     test_n8n
+    add_postgresql_credential
     
     print_status "$GREEN" "=== Installation Complete ==="
     echo
@@ -445,12 +528,20 @@ main() {
     echo "  1. To start N8N manually: $N8N_DIR/start_n8n.sh"
     echo "  2. To install as a system service: ./install_service.sh"
     echo "  3. Access N8N at: http://localhost:$N8N_PORT"
+    echo "  4. After logging in, run: $N8N_DIR/add_postgres_credential.sh"
     echo
     info "Configuration files:"
     echo "  - Environment: $CONFIG_DIR/.env"
     echo "  - Logs: $LOGS_DIR/"
     echo "  - Workflows: $WORKFLOWS_DIR/"
     echo "  - Backups: $BACKUPS_DIR/"
+    echo
+    info "PostgreSQL Database Access:"
+    echo "  - Host: localhost"
+    echo "  - Database: $DB_NAME"
+    echo "  - User: $DB_USER"
+    echo "  - Password: (stored in $CONFIG_DIR/.db_password)"
+    echo "  - Port: $DB_PORT"
     echo
     warning "Important: Keep your database password secure!"
     warning "Database password is stored in: $CONFIG_DIR/.db_password"

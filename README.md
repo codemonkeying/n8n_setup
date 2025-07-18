@@ -5,17 +5,17 @@ A comprehensive, production-ready setup for n8n workflow automation platform wit
 ## 📋 Overview
 
 This setup provides:
-- **PostgreSQL Integration**: Robust database backend for workflow storage
+- **PostgreSQL Integration**: Available PostgreSQL database for workflow integrations (chat history, data storage, etc.)
 - **Systemd Service**: Automatic startup, restart on failure, and proper process management
 - **Security Hardening**: Secure file permissions, dedicated user, and encrypted credentials
 - **Monitoring & Logging**: Comprehensive logging with rotation and service monitoring
-- **Backup System**: Automated backup scripts for database and workflows
+- **Backup System**: Automated backup scripts for user data and workflows
 - **Virtual Environment**: Isolated Python environment for dependencies
 
 ## 🏗️ Project Structure
 
 ```
-/home/user/n8n/
+./
 ├── n8n_setup_plan.md           # Original setup plan documentation
 ├── n8n_implementation_plan.md  # Detailed implementation guide
 ├── n8n_setup.sh               # Main setup script
@@ -37,7 +37,7 @@ This setup provides:
 
 ### 1. Run Main Setup
 ```bash
-cd /home/user/n8n
+cd /path/to/n8n
 ./n8n_setup.sh
 ```
 
@@ -109,8 +109,8 @@ DB_PASSWORD=<auto_generated_secure_password>
 N8N_PORT=5678
 N8N_HOST=0.0.0.0
 WEBHOOK_URL=http://localhost:5678
-N8N_USER_FOLDER=/home/user/n8n
-WORKFLOWS_FOLDER=/home/user/n8n/workflows
+N8N_USER_FOLDER=<current_directory>
+WORKFLOWS_FOLDER=<current_directory>/workflows
 
 # Security
 N8N_ENCRYPTION_KEY=<auto_generated_32_char_key>
@@ -119,7 +119,7 @@ N8N_USER_MANAGEMENT_DISABLED=false
 # Logging
 N8N_LOG_LEVEL=info
 N8N_LOG_OUTPUT=file
-N8N_LOG_FILE_LOCATION=/home/user/n8n/logs/
+N8N_LOG_FILE_LOCATION=<current_directory>/logs/
 ```
 
 ### Customization
@@ -127,6 +127,92 @@ N8N_LOG_FILE_LOCATION=/home/user/n8n/logs/
 To modify configuration:
 1. Edit `config/.env` file
 2. Restart n8n service: `sudo systemctl restart n8n`
+
+## 📁 User Data Storage
+
+### Where N8N Stores Your Workflows and Data
+
+N8N stores all user workflows, credentials, and settings in SQLite database files located in:
+
+**Primary User Data Directory:**
+```
+~/.n8n/
+├── database.sqlite         # SQLite database containing workflows, executions, credentials
+├── nodes/                  # Custom node installations (if any)
+├── logs/                   # N8N application logs
+└── config                  # N8N configuration file
+```
+
+**What's Stored Where:**
+- **Workflows**: All your workflows are stored in `~/.n8n/database.sqlite`
+- **Credentials**: Encrypted credentials stored in the same SQLite database
+- **Executions**: Workflow execution history stored in SQLite database
+- **Custom Nodes**: Any custom nodes installed go in `~/.n8n/nodes/`
+- **Settings**: User preferences and n8n settings stored in the database
+
+### PostgreSQL Database Purpose
+
+The PostgreSQL database configured in this setup is **NOT** used by n8n for internal storage. Instead, it's provided as a resource for your workflows to:
+- Store chat history from AI integrations
+- Save workflow data and results
+- Create custom data storage solutions
+- Build applications that need persistent data storage
+
+### PostgreSQL Connection Details
+
+For use in n8n workflows, the PostgreSQL database has these connection details:
+
+```bash
+Host: localhost
+Database: n8n_db
+User: n8n_user
+Password: (stored in ./config/.db_password)
+Port: 5432
+SSL: disabled (safe for localhost)
+```
+
+### Adding PostgreSQL Credential to N8N
+
+After n8n is running and you've logged in, you can automatically add the PostgreSQL credential:
+
+```bash
+# Run the credential setup script
+./add_postgres_credential.sh
+```
+
+This will create a credential named "PostgreSQL Database" that you can use in your workflows for:
+- Database operations (SELECT, INSERT, UPDATE, DELETE)
+- Storing chat history from AI conversations
+- Creating custom data storage solutions
+- Building applications with persistent data
+
+### Backup Your Important Data
+
+To backup your n8n workflows and data:
+
+```bash
+# Backup the SQLite database (contains all workflows and credentials)
+cp ~/.n8n/database.sqlite ./backups/database_backup_$(date +%Y%m%d_%H%M%S).sqlite
+
+# Backup entire .n8n directory
+tar -czf ./backups/n8n_userdata_$(date +%Y%m%d_%H%M%S).tar.gz -C ~ .n8n/
+
+# Backup configuration
+cp ./config/.env ./backups/config_backup_$(date +%Y%m%d_%H%M%S).env
+```
+
+### Accessing Your Data
+
+```bash
+# View your workflows directory structure
+ls -la ~/.n8n/
+
+# Check database file size
+ls -lh ~/.n8n/database.sqlite
+
+# View n8n logs
+tail -f ~/.n8n/logs/n8n.log
+```
 
 ## 🎮 Usage
 
@@ -242,7 +328,7 @@ sudo systemctl status postgresql
 #### Permission Issues
 ```bash
 # Reset permissions
-sudo chown -R n8n:n8n /home/user/n8n
+sudo chown -R n8n:n8n .
 chmod 700 config/
 chmod 600 config/.env config/.db_password
 ```
